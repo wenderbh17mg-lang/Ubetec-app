@@ -1,8 +1,16 @@
-# UBETEC — app Android (versão 1.3, empresas e técnicos)
+# UBETEC — app Android (versão 1.4, empresas e técnicos)
 
 App único **UBETEC** (`br.com.ubetec.app`): abre a plataforma em **https://ubetec.com.br** — empresas e técnicos
 entram com o login de sempre. Para o técnico, continua com o GPS em segundo plano durante o expediente/deslocamento,
 microfone e câmera (como o antigo "UBETEC Técnico").
+
+## Novidades da versão 1.4
+
+- **O app se atualiza**: a plataforma compara a versão instalada com a última publicada em Releases e mostra
+  "Nova versão do app" com **Atualizar** — baixa dentro do app (com progresso) e abre o instalador do Android.
+  Na primeira vez, o Android pede para permitir "Instalar apps desconhecidos" para o UBETEC.
+- **Versão na etiqueta**: o `gerar-apk.yml` publica `UBETEC.apk` com a etiqueta `v<versão>-c<versionCode>-b<build>`
+  (ex.: `v1.4-c5-b9`). Para lançar uma versão nova, aumente `versionCode` e `versionName` em `android/app/build.gradle`.
 
 ## Novidades da versão 1.3
 

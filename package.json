@@ -1,6 +1,6 @@
 {
   "name": "ubetec-app",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "description": "App Android UBETEC (empresas e técnicos): abre a plataforma; para o técnico, mantém o GPS em segundo plano durante o expediente e o deslocamento",
   "scripts": {
