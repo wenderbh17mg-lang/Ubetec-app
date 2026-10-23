@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- cor do ícone dos avisos (azul UBETEC) -->
+    <color name="ubetec_avisos">#1D4ED8</color>
+</resources>

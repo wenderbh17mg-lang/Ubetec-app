@@ -24,6 +24,11 @@
 
         </activity>
 
+        <!-- v1.3: avisos com o app fechado (Firebase): ícone, cor e canal padrão -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_avisos" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/ubetec_avisos" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="ubetec_avisos" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

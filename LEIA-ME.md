@@ -1,12 +1,25 @@
-# UBETEC — app Android (versão 1.2, empresas e técnicos)
+# UBETEC — app Android (versão 1.3, empresas e técnicos)
 
 App único **UBETEC** (`br.com.ubetec.app`): abre a plataforma em **https://ubetec.com.br** — empresas e técnicos
 entram com o login de sempre. Para o técnico, continua com o GPS em segundo plano durante o expediente/deslocamento,
 microfone e câmera (como o antigo "UBETEC Técnico").
 
+## Novidades da versão 1.3
+
+- **Tela ajustada ao celular**: o app vai de ponta a ponta (padrão do Android 15) e informa à plataforma a altura
+  da barra de status e da barra de gestos. O topo não fica mais por baixo do relógio/bateria, e a barra inferior
+  fica acima dos gestos. Com o teclado aberto, a tela encolhe para o campo continuar visível.
+- **Ícones das barras acompanham o tema** (claro/escuro) — plugin `UbetecApp` (`android/app/src/main/java/.../UbetecAppPlugin.java`).
+- **Avisos com o app fechado** (Firebase Cloud Messaging) com três canais no Android: *Avisos*, *Alertas urgentes* e
+  *Mensagens* — cada um com som e vibração que a pessoa ajusta no celular.
+  Para ligar: coloque o `google-services.json` do Firebase em `android/app/` (é configuração pública do app,
+  não é senha) e a conta de serviço do Firebase na variável **FCM_SERVICE_ACCOUNT** do painel da hospedagem.
+  Sem o arquivo, o app funciona normalmente e mostra "Avisos com o app fechado — em preparação".
+
+
 ## Gerar o APK pelo GitHub (recomendado)
 
-Envie TODO o conteúdo desta pasta para um repositório no GitHub (Add file › Upload files). O arquivo `.github/workflows/gerar-apk.yml` compila sozinho a cada envio; em ~8 min o `UBETEC-1.2.apk` aparece em **Releases**.
+Envie TODO o conteúdo desta pasta para um repositório no GitHub (Add file › Upload files). O arquivo `.github/workflows/gerar-apk.yml` compila sozinho a cada envio; em ~8 min o `UBETEC-<versão>.apk` aparece em **Releases**.
 A chave de teste `android/app/ubetec-debug.keystore` é fixa: cada APK novo instala por cima do anterior.
 
 ## Gerar o APK no Android Studio (alternativa)
