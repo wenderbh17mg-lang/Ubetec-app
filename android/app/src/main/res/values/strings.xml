@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">UBETEC</string>
+    <string name="title_activity_main">UBETEC</string>
+    <string name="package_name">br.com.ubetec.app</string>
+    <string name="custom_url_scheme">br.com.ubetec.app</string>
+    <!-- notificação fixa enquanto o GPS em segundo plano está ligado -->
+    <string name="capacitor_background_geolocation_notification_channel_name">Localização durante o atendimento</string>
+    <string name="capacitor_background_geolocation_notification_color">#4F46E5</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_stat_ubetec</string>
+</resources>

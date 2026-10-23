@@ -1,0 +1,20 @@
+{
+  "appId": "br.com.ubetec.app",
+  "appName": "UBETEC",
+  "webDir": "www",
+  "server": {
+    "url": "https://ubetec.com.br",
+    "cleartext": false,
+    "errorPath": "sem-conexao.html"
+  },
+  "android": {
+    "useLegacyBridge": true,
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_ubetec",
+      "iconColor": "#4F46E5"
+    }
+  }
+}
