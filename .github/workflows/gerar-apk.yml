@@ -27,16 +27,21 @@ jobs:
         run: npx cap sync android
       - name: Compilar o APK
         run: chmod +x android/gradlew && cd android && ./gradlew assembleDebug --no-daemon --stacktrace
-      - name: Nomear o APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk UBETEC-1.2.apk
+      - name: Versao do app
+        id: v
+        run: |
+          echo "nome=$(grep -oP 'versionName "\K[^"]+' android/app/build.gradle)" >> "$GITHUB_OUTPUT"
+          echo "codigo=$(grep -oP 'versionCode \K[0-9]+' android/app/build.gradle)" >> "$GITHUB_OUTPUT"
+          cp android/app/build/outputs/apk/debug/app-debug.apk UBETEC.apk
       - uses: actions/upload-artifact@v4
         with:
           name: UBETEC-apk
-          path: UBETEC-1.2.apk
+          path: UBETEC.apk
       - name: Publicar em Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2-build${{ github.run_number }}
-          name: UBETEC 1.2 (build ${{ github.run_number }})
-          body: "Baixe o UBETEC-1.2.apk e instale no celular Android."
-          files: UBETEC-1.2.apk
+          tag_name: v${{ steps.v.outputs.nome }}-c${{ steps.v.outputs.codigo }}-b${{ github.run_number }}
+          name: UBETEC ${{ steps.v.outputs.nome }} (build ${{ github.run_number }})
+          body: ${{ github.event.head_commit.message || 'Nova versão do app UBETEC.' }}
+          files: UBETEC.apk
+          make_latest: true
