@@ -5,6 +5,10 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
+import android.content.Context;
 import android.provider.Settings;
 import android.view.Window;
 
@@ -36,6 +40,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  *    {permissao:false}. Só aceita endereços https do GitHub (onde as versões são publicadas).
  *  - v1.6: ativo() → {ligado, bateriaLivre}; sempreAtivo({ligado}) liga/desliga o "UBETEC ativo" em segundo plano;
  *    liberarBateria() abre o pedido do Android para não restringir a bateria do UBETEC.
+ *  - v1.7: vibrar({padrao:[vibra, pausa, vibra…] em ms, forca:1–255}) vibra o celular com a intensidade escolhida
+ *    nos "Sons e avisos" da plataforma (o navegador do app não vibrava: faltava a permissão VIBRATE).
  */
 @CapacitorPlugin(name = "UbetecApp")
 public class UbetecAppPlugin extends Plugin {
@@ -78,6 +84,9 @@ public class UbetecAppPlugin extends Plugin {
         r.put("android", Build.VERSION.SDK_INT);
         r.put("atualizador", true);   // v1.4: sabe baixar e instalar a versão nova
         r.put("sempreAtivo", true);   // v1.6: sabe ficar ativo em segundo plano
+        r.put("vibrar", true);        // v1.7: sabe vibrar com intensidade
+        Vibrator vb = vibrador();
+        r.put("temVibrador", vb != null && vb.hasVibrator());
         r.put("instalarPermitido", Build.VERSION.SDK_INT < 26 || getContext().getPackageManager().canRequestPackageInstalls());
         call.resolve(r);
     }
@@ -97,6 +106,46 @@ public class UbetecAppPlugin extends Plugin {
             call.resolve();
         } catch (Exception e) {
             call.reject("Não foi possível abrir os ajustes.");
+        }
+    }
+
+    private Vibrator vibrador() {
+        try {
+            if (Build.VERSION.SDK_INT >= 31) {
+                VibratorManager vm = (VibratorManager) getContext().getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                return vm != null ? vm.getDefaultVibrator() : null;
+            }
+            return (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
+        } catch (Exception e) { return null; }
+    }
+
+    @PluginMethod
+    public void vibrar(PluginCall call) {
+        Vibrator vb = vibrador();
+        if (vb == null || !vb.hasVibrator()) { call.reject("Este celular não tem motor de vibração."); return; }
+        long[] tempos;
+        try {
+            com.getcapacitor.JSArray arr = call.getArray("padrao");
+            int n = arr == null ? 0 : Math.min(arr.length(), 20);
+            if (n == 0) tempos = new long[] { 0, 200 };
+            else {
+                tempos = new long[n + 1];
+                tempos[0] = 0;   // começa já
+                for (int i = 0; i < n; i++) tempos[i + 1] = Math.max(10, Math.min(2000, arr.getLong(i)));
+            }
+        } catch (Exception e) { tempos = new long[] { 0, 200 }; }
+        int forca = Math.max(1, Math.min(255, call.getInt("forca", 170)));
+        try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                int[] amps = new int[tempos.length];
+                for (int i = 0; i < tempos.length; i++) amps[i] = (i % 2 == 1) ? (vb.hasAmplitudeControl() ? forca : VibrationEffect.DEFAULT_AMPLITUDE) : 0;
+                vb.vibrate(VibrationEffect.createWaveform(tempos, amps, -1));
+            } else {
+                vb.vibrate(tempos, -1);
+            }
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Não foi possível vibrar.");
         }
     }
 
