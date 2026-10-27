@@ -29,6 +29,25 @@
         <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/ubetec_avisos" />
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="ubetec_avisos" />
 
+        <!-- v1.6: UBETEC ativo em segundo plano (avisos e conversa na hora; o GPS continua só no trabalho) -->
+        <service
+            android:name=".AtivoService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Manter o app de trabalho de campo ativo para receber avisos e conversas da empresa em tempo real" />
+        </service>
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -55,6 +74,10 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- v1.4: o app baixa a versão nova e abre o instalador do Android -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- v1.6: ficar ativo em segundo plano, voltar ao ligar o celular e pedir para não restringir a bateria -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>
