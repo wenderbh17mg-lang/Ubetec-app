@@ -1,7 +1,11 @@
 package br.com.ubetec.tecnico;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.ViewGroup;
@@ -29,6 +33,10 @@ import java.util.Locale;
  * aberto, a WebView encolhe para o campo digitado continuar visível.
  * O GPS em segundo plano é feito pelo plugin BackgroundGeolocation, ligado pela plataforma só durante
  * o expediente ou o deslocamento/atendimento de uma O.S. Os avisos com o app fechado chegam pelo Firebase.
+ *
+ * v1.6: o app fica ativo em segundo plano o tempo todo (AtivoService, notificação discreta "UBETEC ativo") e,
+ * na primeira vez, pede ao Android para não restringir a bateria do UBETEC (senão Xiaomi/Samsung/Motorola
+ * fecham o app e os avisos, a conversa e o GPS do trabalho param).
  */
 public class MainActivity extends BridgeActivity {
     private static final int PEDIDO_NOTIFICACAO = 4101;
@@ -47,7 +55,11 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT >= 33
                 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{ Manifest.permission.POST_NOTIFICATIONS }, PEDIDO_NOTIFICACAO);
+        } else {
+            getWindow().getDecorView().postDelayed(this::pedirBateriaUmaVez, 1200);
         }
+        // v1.6: UBETEC ativo em segundo plano
+        AtivoService.iniciar(this);
 
         final WebView web = getBridge().getWebView();
         ViewCompat.setOnApplyWindowInsetsListener(web, (v, insets) -> {
@@ -78,6 +90,45 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void onPageLoaded(WebView webView) { injetarBordas(webView); }
         });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PEDIDO_NOTIFICACAO) {
+            AtivoService.iniciar(this);   // com a permissão, a notificação "UBETEC ativo" aparece
+            getWindow().getDecorView().postDelayed(this::pedirBateriaUmaVez, 600);
+        }
+    }
+
+    /** v1.6: pede uma vez para o Android não restringir a bateria do UBETEC (sem isso, o app é fechado em segundo plano). */
+    private void pedirBateriaUmaVez() {
+        try {
+            if (Build.VERSION.SDK_INT < 23 || bateriaLivre(this)) return;
+            if (AtivoService.prefs(this).getBoolean("pediu_bateria", false)) return;
+            AtivoService.prefs(this).edit().putBoolean("pediu_bateria", true).apply();
+            pedirBateria(this);
+        } catch (Exception ignorado) { }
+    }
+
+    static boolean bateriaLivre(android.content.Context c) {
+        if (Build.VERSION.SDK_INT < 23) return true;
+        PowerManager pm = (PowerManager) c.getSystemService(POWER_SERVICE);
+        return pm != null && pm.isIgnoringBatteryOptimizations(c.getPackageName());
+    }
+
+    static void pedirBateria(android.content.Context c) {
+        try {
+            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + c.getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            c.startActivity(i);
+        } catch (Exception e) {
+            try {
+                Intent i = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                c.startActivity(i);
+            } catch (Exception ignorado) { }
+        }
     }
 
     private void injetarBordas(final WebView web) {

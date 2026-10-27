@@ -34,6 +34,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  *  - atualizar({url}): v1.4 — baixa a versão nova do app (evento "atualizacao" com o progresso) e abre o
  *    instalador do Android. Se o Android ainda não deixa o UBETEC instalar apps, abre o ajuste e devolve
  *    {permissao:false}. Só aceita endereços https do GitHub (onde as versões são publicadas).
+ *  - v1.6: ativo() → {ligado, bateriaLivre}; sempreAtivo({ligado}) liga/desliga o "UBETEC ativo" em segundo plano;
+ *    liberarBateria() abre o pedido do Android para não restringir a bateria do UBETEC.
  */
 @CapacitorPlugin(name = "UbetecApp")
 public class UbetecAppPlugin extends Plugin {
@@ -75,6 +77,7 @@ public class UbetecAppPlugin extends Plugin {
         r.put("firebase", id != 0);
         r.put("android", Build.VERSION.SDK_INT);
         r.put("atualizador", true);   // v1.4: sabe baixar e instalar a versão nova
+        r.put("sempreAtivo", true);   // v1.6: sabe ficar ativo em segundo plano
         r.put("instalarPermitido", Build.VERSION.SDK_INT < 26 || getContext().getPackageManager().canRequestPackageInstalls());
         call.resolve(r);
     }
@@ -95,6 +98,29 @@ public class UbetecAppPlugin extends Plugin {
         } catch (Exception e) {
             call.reject("Não foi possível abrir os ajustes.");
         }
+    }
+
+    @PluginMethod
+    public void ativo(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("ligado", AtivoService.ligado(getContext()));
+        r.put("bateriaLivre", MainActivity.bateriaLivre(getContext()));
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void sempreAtivo(PluginCall call) {
+        boolean v = !Boolean.FALSE.equals(call.getBoolean("ligado", true));
+        AtivoService.definir(getContext(), v);
+        JSObject r = new JSObject();
+        r.put("ligado", v);
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void liberarBateria(PluginCall call) {
+        MainActivity.pedirBateria(getContext());
+        call.resolve();
     }
 
     private volatile boolean baixando = false;
