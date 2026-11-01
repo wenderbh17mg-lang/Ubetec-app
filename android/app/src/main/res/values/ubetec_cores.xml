@@ -2,4 +2,6 @@
 <resources>
     <!-- cor do ícone dos avisos (azul UBETEC) -->
     <color name="ubetec_avisos">#1D4ED8</color>
+    <!-- v1.8: fundo da janela antes da página pintar (azul-marinho da plataforma) -->
+    <color name="ubetec_fundo">#0A1220</color>
 </resources>
