@@ -40,6 +40,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  *    {permissao:false}. Só aceita endereços https do GitHub (onde as versões são publicadas).
  *  - v1.6: ativo() → {ligado, bateriaLivre}; sempreAtivo({ligado}) liga/desliga o "UBETEC ativo" em segundo plano;
  *    liberarBateria() abre o pedido do Android para não restringir a bateria do UBETEC.
+ *  - v1.8: barras() também recebe corTopo/corBase ("#RRGGBB") para pintar as faixas fora da área segura.
  *  - v1.7: vibrar({padrao:[vibra, pausa, vibra…] em ms, forca:1–255}) vibra o celular com a intensidade escolhida
  *    nos "Sons e avisos" da plataforma (o navegador do app não vibrava: faltava a permissão VIBRATE).
  */
@@ -57,6 +58,8 @@ public class UbetecAppPlugin extends Plugin {
         final boolean escuroBase = Boolean.TRUE.equals(call.getBoolean("escuroBase", false));
         final Activity a = getActivity();
         if (a == null) { call.resolve(); return; }
+        // v1.8: cores do topo e da base ("#RRGGBB") para pintar as faixas fora da área segura
+        MainActivity.cores(corDe(call.getString("corTopo")), corDe(call.getString("corBase")));
         a.runOnUiThread(() -> {
             try {
                 Window w = a.getWindow();
@@ -66,6 +69,10 @@ public class UbetecAppPlugin extends Plugin {
             } catch (Exception ignorado) { }
             call.resolve();
         });
+    }
+
+    private static Integer corDe(String hex) {
+        try { return hex != null && hex.matches("#[0-9a-fA-F]{6}") ? android.graphics.Color.parseColor(hex) : null; } catch (Exception e) { return null; }
     }
 
     @PluginMethod
@@ -85,6 +92,7 @@ public class UbetecAppPlugin extends Plugin {
         r.put("atualizador", true);   // v1.4: sabe baixar e instalar a versão nova
         r.put("sempreAtivo", true);   // v1.6: sabe ficar ativo em segundo plano
         r.put("vibrar", true);        // v1.7: sabe vibrar com intensidade
+        r.put("areaSegura", true);    // v1.8: a plataforma fica dentro da área segura (bordas sempre 0)
         Vibrator vb = vibrador();
         r.put("temVibrador", vb != null && vb.hasVibrator());
         r.put("instalarPermitido", Build.VERSION.SDK_INT < 26 || getContext().getPackageManager().canRequestPackageInstalls());
