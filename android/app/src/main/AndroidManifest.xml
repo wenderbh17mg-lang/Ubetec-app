@@ -38,6 +38,10 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Manter o app de trabalho de campo ativo para receber avisos e conversas da empresa em tempo real" />
         </service>
+        <!-- v1.9: botão flutuante (igual Uber/99) por cima do Waze/Google Maps; um toque volta ao UBETEC -->
+        <service
+            android:name=".BolhaService"
+            android:exported="false" />
         <receiver
             android:name=".BootReceiver"
             android:exported="true">
@@ -80,6 +84,18 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- v1.9: botão flutuante por cima dos outros apps (o Android pede "Sobrepor a outros apps") -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!-- v1.9: no Android 11+ o app só enxerga a câmera do celular se declarar estas ações (sem isso abria a galeria) -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.VIDEO_CAPTURE" />
+        </intent>
+    </queries>
 </manifest>
