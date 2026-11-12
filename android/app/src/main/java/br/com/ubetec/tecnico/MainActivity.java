@@ -55,6 +55,10 @@ import java.util.Locale;
  * fica DENTRO dessa área — nada fica por baixo da câmera, do relógio ou dos gestos, em qualquer modelo. As faixas
  * de fora são pintadas com a cor do topo e da base da tela que está aberta (lida da página), então o visual continua
  * de ponta a ponta. A plataforma recebe bordas 0 (não soma de novo).
+ *
+ * v1.9: botão flutuante (BolhaService) — ao sair do app, uma bolinha do UBETEC fica por cima do Waze/Google Maps e
+ * volta para o app num toque; some quando o app volta para a frente. Também declara as câmeras de foto e de vídeo
+ * (<queries> no manifesto) para o Android 11+ abrir a câmera do celular, não a galeria.
  */
 public class MainActivity extends BridgeActivity {
     private static final int PEDIDO_NOTIFICACAO = 4101;
@@ -125,7 +129,21 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    public void onResume() { super.onResume(); ativa = true; relogio.removeCallbacks(lerCores); relogio.postDelayed(lerCores, 600); }
+    public void onStart() { super.onStart(); BolhaService.aoVoltarAoApp(this); }   // v1.9: de volta ao app, a bolinha some
+
+    @Override
+    public void onStop() {
+        // v1.9: saiu do app (Waze, Google Maps, WhatsApp…): mostra o botão flutuante, se a pessoa ligou
+        if (!isChangingConfigurations()) BolhaService.aoSairDoApp(this);
+        super.onStop();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        BolhaService.ignorarProximaSaida = false;   // v1.9: a tela do próprio app (ajuste/diálogo) já fechou
+        ativa = true; relogio.removeCallbacks(lerCores); relogio.postDelayed(lerCores, 600);
+    }
 
     @Override
     public void onPause() { ativa = false; relogio.removeCallbacks(lerCores); super.onPause(); }
@@ -222,6 +240,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     static void pedirBateria(android.content.Context c) {
+        BolhaService.ignorarProximaSaida = true;   // é uma tela do próprio app: sem bolinha
         try {
             Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + c.getPackageName()));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

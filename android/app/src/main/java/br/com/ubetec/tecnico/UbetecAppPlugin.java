@@ -43,6 +43,11 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  *  - v1.8: barras() também recebe corTopo/corBase ("#RRGGBB") para pintar as faixas fora da área segura.
  *  - v1.7: vibrar({padrao:[vibra, pausa, vibra…] em ms, forca:1–255}) vibra o celular com a intensidade escolhida
  *    nos "Sons e avisos" da plataforma (o navegador do app não vibrava: faltava a permissão VIBRATE).
+ *  - v1.9: botão flutuante (igual Uber/99) — bolha() → {suportado, permissao, ligada, modo, sessao, atividade};
+ *    bolhaConfig({ligada, modo:"atividade"|"sempre"}); bolhaSessao({ativa, atividade}) (técnico logado / em expediente
+ *    ou atividade); bolhaPermissao() abre o ajuste "Sobrepor a outros apps" do Android; bolhaPular() = a próxima saída é
+ *    para uma tela do próprio app (escolher arquivo/galeria) e não mostra a bolinha. Ao voltar para o app, avisa a
+ *    página com o evento "voltou" ({bolhaPermissao}) para a tela atualizar sozinha (e "saiu" ao sair da frente).
  */
 @CapacitorPlugin(name = "UbetecApp")
 public class UbetecAppPlugin extends Plugin {
@@ -93,6 +98,9 @@ public class UbetecAppPlugin extends Plugin {
         r.put("sempreAtivo", true);   // v1.6: sabe ficar ativo em segundo plano
         r.put("vibrar", true);        // v1.7: sabe vibrar com intensidade
         r.put("areaSegura", true);    // v1.8: a plataforma fica dentro da área segura (bordas sempre 0)
+        r.put("bolha", true);         // v1.9: sabe mostrar o botão flutuante
+        r.put("bolhaPermissao", BolhaService.permitido(getContext()));
+        r.put("cameraNativa", true);  // v1.9: <queries> de IMAGE_CAPTURE/VIDEO_CAPTURE no manifesto
         Vibrator vb = vibrador();
         r.put("temVibrador", vb != null && vb.hasVibrator());
         r.put("instalarPermitido", Build.VERSION.SDK_INT < 26 || getContext().getPackageManager().canRequestPackageInstalls());
@@ -101,6 +109,7 @@ public class UbetecAppPlugin extends Plugin {
 
     @PluginMethod
     public void abrirAjustesAvisos(PluginCall call) {
+        BolhaService.ignorarProximaSaida = true;
         try {
             Intent i;
             if (Build.VERSION.SDK_INT >= 26) {
@@ -180,6 +189,70 @@ public class UbetecAppPlugin extends Plugin {
         call.resolve();
     }
 
+    // ---------- v1.9: botão flutuante ----------
+    @PluginMethod
+    public void bolha(PluginCall call) {
+        call.resolve(BolhaService.estado(getContext()));
+    }
+
+    @PluginMethod
+    public void bolhaConfig(PluginCall call) {
+        BolhaService.configurar(getContext(), call.getBoolean("ligada"), call.getString("modo"));
+        call.resolve(BolhaService.estado(getContext()));
+    }
+
+    @PluginMethod
+    public void bolhaSessao(PluginCall call) {
+        BolhaService.sessao(getContext(), call.getBoolean("ativa"), call.getBoolean("atividade"));
+        call.resolve(BolhaService.estado(getContext()));
+    }
+
+    @PluginMethod
+    public void bolhaPermissao(PluginCall call) {
+        JSObject r = BolhaService.estado(getContext());
+        if (BolhaService.permitido(getContext())) { call.resolve(r); return; }
+        BolhaService.ignorarProximaSaida = true;
+        try {
+            Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getContext().getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            r.put("abriu", true);
+        } catch (Exception e) {
+            try {
+                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+                r.put("abriu", true);
+            } catch (Exception ignorado) { r.put("abriu", false); }
+        }
+        call.resolve(r);
+    }
+
+    /** v1.9: a página vai abrir uma tela do próprio app (escolher arquivo, galeria…): sem bolinha nessa saída. */
+    @PluginMethod
+    public void bolhaPular(PluginCall call) {
+        BolhaService.ignorarProximaSaida = true;
+        call.resolve();
+    }
+
+    /** v1.9: o app voltou para a frente (ex.: depois do ajuste "Sobrepor a outros apps"): a página atualiza a tela. */
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        try {
+            JSObject ev = new JSObject();
+            ev.put("bolhaPermissao", BolhaService.permitido(getContext()));
+            notifyListeners("voltou", ev);
+        } catch (Exception ignorado) { }
+    }
+
+    /** v1.9: o app saiu da frente (Waze, Maps, ajustes…): a página anota a hora (para saber, na volta, se foi uma saída rápida). */
+    @Override
+    protected void handleOnPause() {
+        super.handleOnPause();
+        try { notifyListeners("saiu", new JSObject()); } catch (Exception ignorado) { }
+    }
+
     private volatile boolean baixando = false;
 
     @PluginMethod
@@ -189,6 +262,7 @@ public class UbetecAppPlugin extends Plugin {
             call.reject("Endereço da atualização inválido.");
             return;
         }
+        BolhaService.ignorarProximaSaida = true;   // ajuste ou instalador do Android: sem bolinha nessa saída
         if (Build.VERSION.SDK_INT >= 26 && !getContext().getPackageManager().canRequestPackageInstalls()) {
             try {
                 Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getContext().getPackageName()));
