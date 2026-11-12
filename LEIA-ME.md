@@ -1,8 +1,21 @@
-# UBETEC — app Android (versão 1.4, empresas e técnicos)
+# UBETEC — app Android (versão 1.9, empresas e técnicos)
 
 App único **UBETEC** (`br.com.ubetec.app`): abre a plataforma em **https://ubetec.com.br** — empresas e técnicos
 entram com o login de sempre. Para o técnico, continua com o GPS em segundo plano durante o expediente/deslocamento,
 microfone e câmera (como o antigo "UBETEC Técnico").
+
+## Novidades da versão 1.9
+
+- **Botão flutuante (igual Uber/99)**: quando o técnico sai do app (Waze, Google Maps, WhatsApp…), uma bolinha do
+  UBETEC fica por cima das outras telas — um toque volta direto para o UBETEC. Arraste para mudar de altura (gruda na
+  borda) ou até o **×** embaixo para esconder até a próxima saída. Ponto verde = expediente/atividade em andamento.
+  Liga em **Meu perfil › Botão flutuante** na plataforma; o Android pede a permissão **"Sobrepor a outros apps"**.
+  Modo padrão: só durante expediente, deslocamento ou atendimento (ou "sempre que sair do app").
+  Plugin `UbetecApp`: `bolha()`, `bolhaConfig({ligada, modo})`, `bolhaSessao({ativa, atividade})`, `bolhaPermissao()`,
+  evento `voltou` ({bolhaPermissao}); `info()` traz `bolha` e `bolhaPermissao`.
+- **Câmera do celular**: o manifesto declara `<queries>` de `IMAGE_CAPTURE` e `VIDEO_CAPTURE` — no Android 11+ os
+  botões de foto/vídeo abriam a galeria porque o app não "enxergava" a câmera.
+- versionCode 10.
 
 ## Novidades da versão 1.4
 
