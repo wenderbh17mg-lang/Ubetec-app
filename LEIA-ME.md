@@ -1,8 +1,24 @@
-# UBETEC — app Android (versão 1.9, empresas e técnicos)
+# UBETEC — app Android (versão 1.10, empresas e técnicos)
 
 App único **UBETEC** (`br.com.ubetec.app`): abre a plataforma em **https://ubetec.com.br** — empresas e técnicos
 entram com o login de sempre. Para o técnico, continua com o GPS em segundo plano durante o expediente/deslocamento,
 microfone e câmera (como o antigo "UBETEC Técnico").
+
+## Novidades da versão 1.10
+
+- **Voz do próprio celular**: o navegador de dentro do app (WebView) não tem reconhecimento nem síntese de voz, então
+  o microfone da plataforma não funcionava no app. Agora o app usa o reconhecimento do Android (o mesmo do microfone
+  do teclado do Google) e a voz do Android — sem chave e sem custo. Com a plataforma v199.53: **falar com o
+  assistente**, **ditar o relatório** ("Falar o relatório"), **comandos do passo a passo** ("próximo", "voltar",
+  "repetir", "sair"), e ouvir as respostas, os passos, a navegação e os avisos em voz alta.
+  Plugin `UbetecApp`: `vozInfo()` → `{reconhecer, falar, microfone}`; `ouvir({sessao, idioma, parciais, alternativas,
+  silencioMs})` → `{sessao, texto, alternativas, erro?}` com os eventos `vozParcial` e `vozEstado`; `pararOuvir()`,
+  `cancelarOuvir()`; `falar({texto, idioma, velocidade, tom, volume})` → `{ok, erro?}`; `calar()`;
+  `abrirAjustesApp()`. `info()` traz `voz: true`. Código em `VozAndroid.java`; o microfone (RECORD_AUDIO) é pedido
+  na primeira vez que a pessoa toca no microfone.
+- Manifesto: `<queries>` de `android.speech.RecognitionService` e `android.intent.action.TTS_SERVICE` (no Android 11+
+  sem isso o app não enxerga o reconhecimento nem a voz do celular).
+- versionCode 11.
 
 ## Novidades da versão 1.9
 
