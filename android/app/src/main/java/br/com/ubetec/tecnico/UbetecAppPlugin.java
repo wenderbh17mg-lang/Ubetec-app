@@ -1,5 +1,6 @@
 package br.com.ubetec.tecnico;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -23,11 +24,15 @@ import androidx.core.content.FileProvider;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 /**
  * Ponte do app UBETEC com a plataforma (window.Capacitor.Plugins.UbetecApp):
@@ -48,9 +53,97 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  *    ou atividade); bolhaPermissao() abre o ajuste "Sobrepor a outros apps" do Android; bolhaPular() = a próxima saída é
  *    para uma tela do próprio app (escolher arquivo/galeria) e não mostra a bolinha. Ao voltar para o app, avisa a
  *    página com o evento "voltou" ({bolhaPermissao}) para a tela atualizar sozinha (e "saiu" ao sair da frente).
+ *  - v1.10: voz do próprio Android (o navegador do app não tem reconhecimento nem síntese de voz) — vozInfo() →
+ *    {reconhecer, falar, microfone}; ouvir({sessao, idioma, parciais, alternativas, silencioMs}) → {sessao, texto,
+ *    alternativas, erro?} com os eventos "vozParcial" ({sessao, texto}) e "vozEstado" ({sessao, estado}); pararOuvir()
+ *    (entrega o que ouviu), cancelarOuvir(); falar({texto, idioma, velocidade, tom, volume}) → {ok, erro?} quando
+ *    termina; calar(); abrirAjustesApp() abre os ajustes do UBETEC no Android (microfone bloqueado). Ver VozAndroid.
  */
-@CapacitorPlugin(name = "UbetecApp")
+@CapacitorPlugin(
+    name = "UbetecApp",
+    permissions = { @Permission(alias = "microfone", strings = { Manifest.permission.RECORD_AUDIO }) }
+)
 public class UbetecAppPlugin extends Plugin {
+
+    // ---------- v1.10: voz do próprio Android ----------
+    private VozAndroid vozAndroid;
+
+    private VozAndroid vozAndroid() {
+        if (vozAndroid == null) vozAndroid = new VozAndroid(getContext(), (evento, dados) -> notifyListeners(evento, dados));
+        return vozAndroid;
+    }
+
+    @PluginMethod
+    public void vozInfo(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("reconhecer", vozAndroid().reconhecimentoDisponivel());
+        r.put("falar", true);
+        PermissionState st = getPermissionState("microfone");
+        r.put("microfone", st == PermissionState.GRANTED ? "permitido" : st == PermissionState.DENIED ? "negado" : "perguntar");
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void ouvir(PluginCall call) {
+        if (getPermissionState("microfone") != PermissionState.GRANTED) {
+            BolhaService.ignorarProximaSaida = true;   // a janela de permissão do Android não é uma saída do app
+            requestPermissionForAlias("microfone", call, "microfoneRespondido");
+            return;
+        }
+        vozAndroid().ouvir(call);
+    }
+
+    @PermissionCallback
+    private void microfoneRespondido(PluginCall call) {
+        if (getPermissionState("microfone") == PermissionState.GRANTED) {
+            vozAndroid().ouvir(call);
+            return;
+        }
+        JSObject r = new JSObject();
+        Integer sessao = call.getInt("sessao", 0);
+        r.put("sessao", sessao == null ? 0 : sessao.intValue());
+        r.put("texto", "");
+        r.put("alternativas", new JSArray());
+        r.put("erro", "not-allowed");
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void pararOuvir(PluginCall call) {
+        vozAndroid().pararOuvir();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void cancelarOuvir(PluginCall call) {
+        vozAndroid().cancelarOuvir();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void falar(PluginCall call) {
+        vozAndroid().falar(call);
+    }
+
+    @PluginMethod
+    public void calar(PluginCall call) {
+        vozAndroid().calar();
+        call.resolve();
+    }
+
+    /** v1.10: microfone negado de vez — abre os ajustes do UBETEC no Android (Permissões › Microfone). */
+    @PluginMethod
+    public void abrirAjustesApp(PluginCall call) {
+        BolhaService.ignorarProximaSaida = true;
+        try {
+            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Não foi possível abrir os ajustes.");
+        }
+    }
 
     @PluginMethod
     public void bordas(PluginCall call) {
@@ -101,6 +194,7 @@ public class UbetecAppPlugin extends Plugin {
         r.put("bolha", true);         // v1.9: sabe mostrar o botão flutuante
         r.put("bolhaPermissao", BolhaService.permitido(getContext()));
         r.put("cameraNativa", true);  // v1.9: <queries> de IMAGE_CAPTURE/VIDEO_CAPTURE no manifesto
+        r.put("voz", true);           // v1.10: ouvir e falar com a voz do próprio Android
         Vibrator vb = vibrador();
         r.put("temVibrador", vb != null && vb.hasVibrator());
         r.put("instalarPermitido", Build.VERSION.SDK_INT < 26 || getContext().getPackageManager().canRequestPackageInstalls());
@@ -251,6 +345,14 @@ public class UbetecAppPlugin extends Plugin {
     protected void handleOnPause() {
         super.handleOnPause();
         try { notifyListeners("saiu", new JSObject()); } catch (Exception ignorado) { }
+        if (vozAndroid != null) vozAndroid.aoPausar();   // v1.10: fora da frente, o microfone para de ouvir
+    }
+
+    /** v1.10: fecha o reconhecedor e a voz do Android junto com o app. */
+    @Override
+    protected void handleOnDestroy() {
+        super.handleOnDestroy();
+        if (vozAndroid != null) vozAndroid.encerrar();
     }
 
     private volatile boolean baixando = false;
